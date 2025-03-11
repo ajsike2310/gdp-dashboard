@@ -200,11 +200,33 @@ def show_wardrobe():
             filtered_df = filtered_df.sort_values(by=sort_column)
         else:
             filtered_df = filtered_df.sort_values(by=sort_column, ascending=False)
-            
-        st.dataframe(filtered_df)
+        
+        # Display items in a grid
+        cols = st.columns(3)  # Create 3 columns
+        for idx, row in filtered_df.iterrows():
+            with cols[idx % 3]:  # Use modulo to cycle through columns
+                try:
+                    # Display image if path exists
+                    if 'image_path' in row:  # Replace 'image_path' with your actual column name
+                        try:
+                            image = Image.open(row['image_path'])
+                            st.image(image, caption=row.get('name', ''), use_column_width=True)
+                        except Exception as img_error:
+                            st.error(f"Could not load image: {row['image_path']}")
+                            st.write("Error:", str(img_error))
+                    
+                    # Display item details
+                    st.write("**Details:**")
+                    for column in filtered_df.columns:
+                        if column != 'image_path':  # Skip showing the image path
+                            st.write(f"**{column}:** {row[column]}")
+                    st.write("---")  # Add a separator between items
+                except Exception as e:
+                    st.error(f"Error displaying item {idx}: {str(e)}")
         
     except Exception as e:
         st.error(f"Error loading Fashion Dataset: {str(e)}")
+        st.write("Full error details:", e)
 
 def show_rent_items():
     st.header("Available Items for Rent")
