@@ -151,7 +151,10 @@ def show_wardrobe():
         
         for idx, row in filtered_df.iterrows():
             with cols[idx % 3]:
-                st.image(row['img'], use_column_width=True)
+                if row['img'].startswith('http'):
+                    st.image(row['img'], use_column_width=True)
+                else:
+                    st.warning(f"Image URL not valid: {row['img']}")
                 st.write(f"**{row['name']}**")
                 st.write(f"Brand: {row['brand']}")
                 st.write(f"Color: {row['colour']}")
