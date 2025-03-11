@@ -72,17 +72,34 @@ def show_login_signup():
             if st.button("Login"):
                 try:
                     users_df = pd.read_csv('users.csv')
-                    st.write("Debug - Available users:", users_df['username'].tolist())
+                    # Debug information
+                    st.write("Debug Info:")
+                    st.write("- Entered username:", login_username)
+                    st.write("- Entered password:", login_password)
+                    st.write("- Available users in database:", users_df.to_dict('records'))
+                    
+                    # Check if username exists first
+                    user_exists = users_df[users_df['username'] == login_username]
+                    if user_exists.empty:
+                        st.error(f"Username '{login_username}' not found")
+                        return
+                    
+                    # Now check password
                     user = users_df[(users_df['username'] == login_username) & 
                                   (users_df['password'] == login_password)]
+                    
                     if not user.empty:
                         st.session_state.logged_in = True
                         st.session_state.current_user = login_username
                         st.experimental_rerun()
                     else:
-                        st.error(f"Invalid credentials. Username '{login_username}' not found or password incorrect.")
+                        stored_password = user_exists.iloc[0]['password']
+                        st.error(f"Incorrect password for user '{login_username}'")
+                        st.write(f"Debug - Stored password in database: {stored_password}")
+                        
                 except Exception as e:
                     st.error(f"Error during login: {str(e)}")
+                    st.write("Full error details:", e)
         
         with col1_2:
             if st.button("Forgot Password"):
