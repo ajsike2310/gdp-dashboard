@@ -179,98 +179,93 @@ def show_wardrobe():
     st.header("My Wardrobe")
     
     try:
-        # Load and display Fashion Dataset
+        # Load Fashion Dataset
         wardrobe_df = pd.read_csv('Fashion Dataset.csv')
         
-        # Display the dataset with a search/filter option
-        st.subheader("Browse Fashion Items")
-        
         # Add filter options
-        col1, col2 = st.columns(2)
-        with col1:
-            # Price range filter
-            price_range = st.slider("Price Range (₹)", 
-                                  min_value=int(wardrobe_df['price'].min()),
-                                  max_value=int(wardrobe_df['price'].max()),
-                                  value=(int(wardrobe_df['price'].min()), int(wardrobe_df['price'].max())))
-            
-        with col2:
-            # Brand and color filters
-            brand_filter = st.multiselect("Brand", options=sorted(wardrobe_df['brand'].unique()))
-            colour_filter = st.multiselect("Color", options=sorted(wardrobe_df['colour'].unique()))
+        st.sidebar.header("Filters")
         
-        # Text search
-        search_term = st.text_input("Search by name")
+        # Price filter
+        price_range = st.sidebar.slider(
+            "Price Range (₹)", 
+            min_value=int(wardrobe_df['price'].min()),
+            max_value=int(wardrobe_df['price'].max()),
+            value=(int(wardrobe_df['price'].min()), int(wardrobe_df['price'].max()))
+        )
+        
+        # Brand filter
+        brands = sorted(wardrobe_df['brand'].unique())
+        selected_brands = st.sidebar.multiselect("Select Brands", brands)
+        
+        # Color filter
+        colors = sorted(wardrobe_df['colour'].unique())
+        selected_colors = st.sidebar.multiselect("Select Colors", colors)
+        
+        # Search by name
+        search_term = st.sidebar.text_input("Search by name")
         
         # Apply filters
         filtered_df = wardrobe_df.copy()
         
-        # Apply price filter
+        # Price filter
         filtered_df = filtered_df[
             (filtered_df['price'] >= price_range[0]) & 
             (filtered_df['price'] <= price_range[1])
         ]
         
-        # Apply brand filter
-        if brand_filter:
-            filtered_df = filtered_df[filtered_df['brand'].isin(brand_filter)]
-            
-        # Apply color filter
-        if colour_filter:
-            filtered_df = filtered_df[filtered_df['colour'].isin(colour_filter)]
-            
-        # Apply text search
+        # Brand filter
+        if selected_brands:
+            filtered_df = filtered_df[filtered_df['brand'].isin(selected_brands)]
+        
+        # Color filter
+        if selected_colors:
+            filtered_df = filtered_df[filtered_df['colour'].isin(selected_colors)]
+        
+        # Name search
         if search_term:
             filtered_df = filtered_df[filtered_df['name'].str.contains(search_term, case=False, na=False)]
-        
+
         # Display items in a grid
-        cols = st.columns(3)  # Create 3 columns
-        for idx, row in filtered_df.iterrows():
-            with cols[idx % 3]:  # Use modulo to cycle through columns
-                try:
-                    # Create a card-like container for each item
-                    with st.container():
-                        # Display image from URL
-                        if pd.notna(row['img']):  # Check if image URL is not null
-                            try:
-                                st.image(
-                                    row['img'],
-                                    caption=row['name'],
-                                    use_column_width=True,
-                                )
-                            except Exception as img_error:
-                                st.warning("Image not available")
-                                st.write(f"Product ID: {row['p_id']}")
-                        else:
-                            st.warning("No image available")
-                        
-                        # Create a clean product card
-                        st.markdown(
-                            f"""
-                            <div style='background-color: white; padding: 10px; border-radius: 5px; margin: 5px 0;'>
-                                <h3 style='margin: 0; color: #333;'>{row['name']}</h3>
-                                <p style='color: #2E7D32; font-size: 20px; margin: 5px 0;'>₹{row['price']}</p>
-                                <p style='margin: 5px 0;'><strong>Brand:</strong> {row['brand']}</p>
-                                <p style='margin: 5px 0;'><strong>Color:</strong> {row['colour']}</p>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                        
-                        # Add to cart/wishlist buttons
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            if st.button("🛒 Add to Cart", key=f"cart_{row['p_id']}"):
-                                st.success("Added to cart!")
-                        with col2:
-                            if st.button("❤️ Wishlist", key=f"wish_{row['p_id']}"):
-                                st.success("Added to wishlist!")
-                        
-                        st.markdown("---")  # Separator between items
-                        
-                except Exception as e:
-                    st.error(f"Error displaying item {row['name']}: {str(e)}")
+        num_cols = 3
+        cols = st.columns(num_cols)
         
+        for index, row in filtered_df.iterrows():
+            col_idx = index % num_cols
+            with cols[col_idx]:
+                with st.container():
+                    # Product card with shadow and border
+                    st.markdown(
+                        f"""
+                        <div style='
+                            border: 1px solid #ddd;
+                            border-radius: 10px;
+                            padding: 10px;
+                            margin: 10px 0;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        '>
+                            <img src="{row['img']}" 
+                                style='width: 100%; 
+                                border-radius: 5px; 
+                                margin-bottom: 10px;'
+                            />
+                            <h4 style='margin: 5px 0; color: #333;'>{row['name']}</h4>
+                            <p style='color: #2E7D32; font-size: 18px; font-weight: bold;'>₹{row['price']}</p>
+                            <p><strong>Brand:</strong> {row['brand']}</p>
+                            <p><strong>Color:</strong> {row['colour']}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                    # Buttons
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🛒 Add to Cart", key=f"cart_{row['p_id']}"):
+                            st.success("Added to cart!")
+                    with col2:
+                        if st.button("❤️ Wishlist", key=f"wish_{row['p_id']}"):
+                            st.success("Added to wishlist!")
+
         if filtered_df.empty:
             st.info("No items found matching your filters.")
             
