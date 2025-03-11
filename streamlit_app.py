@@ -66,20 +66,38 @@ def show_login_signup():
         st.header("Login")
         login_username = st.text_input("Username", key="login_username")
         login_password = st.text_input("Password", type="password", key="login_password")
-        if st.button("Login"):
-            try:
-                users_df = pd.read_csv('users.csv')
-                st.write("Debug - Available users:", users_df['username'].tolist())
-                user = users_df[(users_df['username'] == login_username) & 
-                              (users_df['password'] == login_password)]
-                if not user.empty:
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = login_username
-                    st.experimental_rerun()
-                else:
-                    st.error(f"Invalid credentials. Username '{login_username}' not found or password incorrect.")
-            except Exception as e:
-                st.error(f"Error during login: {str(e)}")
+        
+        col1_1, col1_2 = st.columns(2)
+        with col1_1:
+            if st.button("Login"):
+                try:
+                    users_df = pd.read_csv('users.csv')
+                    st.write("Debug - Available users:", users_df['username'].tolist())
+                    user = users_df[(users_df['username'] == login_username) & 
+                                  (users_df['password'] == login_password)]
+                    if not user.empty:
+                        st.session_state.logged_in = True
+                        st.session_state.current_user = login_username
+                        st.experimental_rerun()
+                    else:
+                        st.error(f"Invalid credentials. Username '{login_username}' not found or password incorrect.")
+                except Exception as e:
+                    st.error(f"Error during login: {str(e)}")
+        
+        with col1_2:
+            if st.button("Forgot Password"):
+                try:
+                    users_df = pd.read_csv('users.csv')
+                    if login_username:
+                        user = users_df[users_df['username'] == login_username]
+                        if not user.empty:
+                            st.info(f"Your password is: {user.iloc[0]['password']}")
+                        else:
+                            st.error("Username not found")
+                    else:
+                        st.warning("Please enter your username above")
+                except Exception as e:
+                    st.error(f"Error retrieving password: {str(e)}")
 
     with col2:
         st.header("Sign Up")
