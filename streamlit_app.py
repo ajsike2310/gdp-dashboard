@@ -64,7 +64,7 @@ def show_login_signup():
     
     with col1:
         st.header("Login")
-        login_username = st.text_input("Username", key="login_username")
+        login_username = st.text_input("Username or Email", key="login_username")
         login_password = st.text_input("Password", type="password", key="login_password")
         
         col1_1, col1_2 = st.columns(2)
@@ -74,27 +74,29 @@ def show_login_signup():
                     users_df = pd.read_csv('users.csv')
                     # Debug information
                     st.write("Debug Info:")
-                    st.write("- Entered username:", login_username)
+                    st.write("- Entered username/email:", login_username)
                     st.write("- Entered password:", login_password)
                     st.write("- Available users in database:", users_df.to_dict('records'))
                     
-                    # Check if username exists first
-                    user_exists = users_df[users_df['username'] == login_username]
+                    # Check if username/email exists
+                    user_exists = users_df[(users_df['username'] == login_username) | 
+                                        (users_df['email'] == login_username)]
                     if user_exists.empty:
-                        st.error(f"Username '{login_username}' not found")
+                        st.error(f"Account with username/email '{login_username}' not found")
                         return
                     
                     # Now check password
-                    user = users_df[(users_df['username'] == login_username) & 
+                    user = users_df[((users_df['username'] == login_username) | 
+                                   (users_df['email'] == login_username)) & 
                                   (users_df['password'] == login_password)]
                     
                     if not user.empty:
                         st.session_state.logged_in = True
-                        st.session_state.current_user = login_username
+                        st.session_state.current_user = user.iloc[0]['username']
                         st.experimental_rerun()
                     else:
                         stored_password = user_exists.iloc[0]['password']
-                        st.error(f"Incorrect password for user '{login_username}'")
+                        st.error(f"Incorrect password")
                         st.write(f"Debug - Stored password in database: {stored_password}")
                         
                 except Exception as e:
