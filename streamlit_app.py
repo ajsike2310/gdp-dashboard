@@ -36,14 +36,22 @@ if 'logged_in' not in st.session_state:
 if 'current_user' not in st.session_state:
     st.session_state.current_user = None
 
-# Create necessary DataFrames if they don't exist
-if not os.path.exists('users.csv'):
-    users_df = pd.DataFrame(columns=['username', 'password', 'email'])
-    users_df.to_csv('users.csv', index=False)
-
-if not os.path.exists('wardrobe.csv'):
-    wardrobe_df = pd.DataFrame(columns=['owner', 'item_name', 'description', 'price', 'status'])
-    wardrobe_df.to_csv('wardrobe.csv', index=False)
+# Create users.csv if it doesn't exist
+try:
+    if not os.path.exists('users.csv'):
+        st.write("Creating new users.csv file...")
+        users_df = pd.DataFrame(columns=['username', 'password', 'email'])
+        users_df.to_csv('users.csv', index=False)
+        st.write("users.csv created successfully!")
+    
+    # Load Fashion Dataset
+    if os.path.exists('Fashion Dataset.csv'):
+        wardrobe_df = pd.read_csv('Fashion Dataset.csv')
+        st.write("Fashion Dataset loaded successfully!")
+    else:
+        st.error("Fashion Dataset.csv not found! Please make sure the file exists in the same directory.")
+except Exception as e:
+    st.error(f"Error loading files: {str(e)}")
 
 def main():
     if not st.session_state.logged_in:
@@ -59,15 +67,19 @@ def show_login_signup():
         login_username = st.text_input("Username", key="login_username")
         login_password = st.text_input("Password", type="password", key="login_password")
         if st.button("Login"):
-            users_df = pd.read_csv('users.csv')
-            user = users_df[(users_df['username'] == login_username) & 
-                          (users_df['password'] == login_password)]
-            if not user.empty:
-                st.session_state.logged_in = True
-                st.session_state.current_user = login_username
-                st.experimental_rerun()
-            else:
-                st.error("Invalid credentials")
+            try:
+                users_df = pd.read_csv('users.csv')
+                st.write("Debug - Available users:", users_df['username'].tolist())
+                user = users_df[(users_df['username'] == login_username) & 
+                              (users_df['password'] == login_password)]
+                if not user.empty:
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = login_username
+                    st.experimental_rerun()
+                else:
+                    st.error(f"Invalid credentials. Username '{login_username}' not found or password incorrect.")
+            except Exception as e:
+                st.error(f"Error during login: {str(e)}")
 
     with col2:
         st.header("Sign Up")
@@ -75,18 +87,26 @@ def show_login_signup():
         new_password = st.text_input("Password", type="password", key="signup_password")
         new_email = st.text_input("Email", key="signup_email")
         if st.button("Sign Up"):
-            users_df = pd.read_csv('users.csv')
-            if new_username in users_df['username'].values:
-                st.error("Username already exists")
-            else:
-                new_user = pd.DataFrame({
-                    'username': [new_username],
-                    'password': [new_password],
-                    'email': [new_email]
-                })
-                users_df = pd.concat([users_df, new_user], ignore_index=True)
-                users_df.to_csv('users.csv', index=False)
-                st.success("Account created successfully!")
+            try:
+                if not new_username or not new_password or not new_email:
+                    st.error("Please fill in all fields")
+                    return
+                
+                users_df = pd.read_csv('users.csv')
+                if new_username in users_df['username'].values:
+                    st.error("Username already exists")
+                else:
+                    new_user = pd.DataFrame({
+                        'username': [new_username],
+                        'password': [new_password],
+                        'email': [new_email]
+                    })
+                    users_df = pd.concat([users_df, new_user], ignore_index=True)
+                    users_df.to_csv('users.csv', index=False)
+                    st.success("Account created successfully! You can now login.")
+                    st.write("Debug - Updated users:", users_df['username'].tolist())
+            except Exception as e:
+                st.error(f"Error during signup: {str(e)}")
 
 def show_main_app():
     st.title(f"Welcome to e-STYLE, {st.session_state.current_user}!")
@@ -121,32 +141,33 @@ def show_home():
 def show_wardrobe():
     st.header("My Wardrobe")
     
-    # Add new item form
-    with st.expander("Add New Item"):
-        item_name = st.text_input("Item Name")
-        description = st.text_area("Description")
-        price = st.number_input("Daily Rental Price (₹)", min_value=0.0)
-        if st.button("Add Item"):
-            wardrobe_df = pd.read_csv('wardrobe.csv')
-            new_item = pd.DataFrame({
-                'owner': [st.session_state.current_user],
-                'item_name': [item_name],
-                'description': [description],
-                'price': [price],
-                'status': ['available']
-            })
-            wardrobe_df = pd.concat([wardrobe_df, new_item], ignore_index=True)
-            wardrobe_df.to_csv('wardrobe.csv', index=False)
-            st.success("Item added successfully!")
-    
-    # Display user's items
-    wardrobe_df = pd.read_csv('wardrobe.csv')
-    user_items = wardrobe_df[wardrobe_df['owner'] == st.session_state.current_user]
-    if not user_items.empty:
-        st.write("Your Items:")
-        st.dataframe(user_items)
-    else:
-        st.info("You haven't added any items yet.")
+    try:
+        # Load and display Fashion Dataset
+        wardrobe_df = pd.read_csv('Fashion Dataset.csv')
+        
+        # Display the dataset with a search/filter option
+        st.subheader("Browse Fashion Items")
+        search_term = st.text_input("Search items (by name, category, etc.)")
+        
+        if search_term:
+            # Filter based on search term (checking all columns)
+            filtered_df = wardrobe_df[wardrobe_df.astype(str).apply(lambda x: x.str.contains(search_term, case=False)).any(axis=1)]
+        else:
+            filtered_df = wardrobe_df
+            
+        # Add sorting options
+        sort_column = st.selectbox("Sort by:", wardrobe_df.columns)
+        sort_order = st.radio("Sort order:", ["Ascending", "Descending"])
+        
+        if sort_order == "Ascending":
+            filtered_df = filtered_df.sort_values(by=sort_column)
+        else:
+            filtered_df = filtered_df.sort_values(by=sort_column, ascending=False)
+            
+        st.dataframe(filtered_df)
+        
+    except Exception as e:
+        st.error(f"Error loading Fashion Dataset: {str(e)}")
 
 def show_rent_items():
     st.header("Available Items for Rent")
