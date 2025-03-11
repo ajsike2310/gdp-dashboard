@@ -230,14 +230,32 @@ def show_wardrobe():
                 try:
                     # Create a card-like container for each item
                     with st.container():
-                        # Display image
-                        st.image(row['img'], caption=row['name'], use_column_width=True)
+                        # Display image from URL
+                        if pd.notna(row['img']):  # Check if image URL is not null
+                            try:
+                                st.image(
+                                    row['img'],
+                                    caption=row['name'],
+                                    use_column_width=True,
+                                )
+                            except Exception as img_error:
+                                st.warning("Image not available")
+                                st.write(f"Product ID: {row['p_id']}")
+                        else:
+                            st.warning("No image available")
                         
-                        # Display key details
-                        st.markdown(f"**{row['name']}**")
-                        st.markdown(f"**Price:** ₹{row['price']}")
-                        st.markdown(f"**Brand:** {row['brand']}")
-                        st.markdown(f"**Color:** {row['colour']}")
+                        # Create a clean product card
+                        st.markdown(
+                            f"""
+                            <div style='background-color: white; padding: 10px; border-radius: 5px; margin: 5px 0;'>
+                                <h3 style='margin: 0; color: #333;'>{row['name']}</h3>
+                                <p style='color: #2E7D32; font-size: 20px; margin: 5px 0;'>₹{row['price']}</p>
+                                <p style='margin: 5px 0;'><strong>Brand:</strong> {row['brand']}</p>
+                                <p style='margin: 5px 0;'><strong>Color:</strong> {row['colour']}</p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
                         
                         # Add to cart/wishlist buttons
                         col1, col2 = st.columns(2)
