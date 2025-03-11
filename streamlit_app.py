@@ -184,46 +184,78 @@ def show_wardrobe():
         
         # Display the dataset with a search/filter option
         st.subheader("Browse Fashion Items")
-        search_term = st.text_input("Search items (by name, category, etc.)")
         
-        if search_term:
-            # Filter based on search term (checking all columns)
-            filtered_df = wardrobe_df[wardrobe_df.astype(str).apply(lambda x: x.str.contains(search_term, case=False)).any(axis=1)]
-        else:
-            filtered_df = wardrobe_df
+        # Add filter options
+        col1, col2 = st.columns(2)
+        with col1:
+            # Price range filter
+            price_range = st.slider("Price Range (₹)", 
+                                  min_value=int(wardrobe_df['price'].min()),
+                                  max_value=int(wardrobe_df['price'].max()),
+                                  value=(int(wardrobe_df['price'].min()), int(wardrobe_df['price'].max())))
             
-        # Add sorting options
-        sort_column = st.selectbox("Sort by:", wardrobe_df.columns)
-        sort_order = st.radio("Sort order:", ["Ascending", "Descending"])
+        with col2:
+            # Brand and color filters
+            brand_filter = st.multiselect("Brand", options=sorted(wardrobe_df['brand'].unique()))
+            colour_filter = st.multiselect("Color", options=sorted(wardrobe_df['colour'].unique()))
         
-        if sort_order == "Ascending":
-            filtered_df = filtered_df.sort_values(by=sort_column)
-        else:
-            filtered_df = filtered_df.sort_values(by=sort_column, ascending=False)
+        # Text search
+        search_term = st.text_input("Search by name")
+        
+        # Apply filters
+        filtered_df = wardrobe_df.copy()
+        
+        # Apply price filter
+        filtered_df = filtered_df[
+            (filtered_df['price'] >= price_range[0]) & 
+            (filtered_df['price'] <= price_range[1])
+        ]
+        
+        # Apply brand filter
+        if brand_filter:
+            filtered_df = filtered_df[filtered_df['brand'].isin(brand_filter)]
+            
+        # Apply color filter
+        if colour_filter:
+            filtered_df = filtered_df[filtered_df['colour'].isin(colour_filter)]
+            
+        # Apply text search
+        if search_term:
+            filtered_df = filtered_df[filtered_df['name'].str.contains(search_term, case=False, na=False)]
         
         # Display items in a grid
         cols = st.columns(3)  # Create 3 columns
         for idx, row in filtered_df.iterrows():
             with cols[idx % 3]:  # Use modulo to cycle through columns
                 try:
-                    # Display image if path exists
-                    if 'image_path' in row:  # Replace 'image_path' with your actual column name
-                        try:
-                            image = Image.open(row['image_path'])
-                            st.image(image, caption=row.get('name', ''), use_column_width=True)
-                        except Exception as img_error:
-                            st.error(f"Could not load image: {row['image_path']}")
-                            st.write("Error:", str(img_error))
-                    
-                    # Display item details
-                    st.write("**Details:**")
-                    for column in filtered_df.columns:
-                        if column != 'image_path':  # Skip showing the image path
-                            st.write(f"**{column}:** {row[column]}")
-                    st.write("---")  # Add a separator between items
+                    # Create a card-like container for each item
+                    with st.container():
+                        # Display image
+                        st.image(row['img'], caption=row['name'], use_column_width=True)
+                        
+                        # Display key details
+                        st.markdown(f"**{row['name']}**")
+                        st.markdown(f"**Price:** ₹{row['price']}")
+                        st.markdown(f"**Brand:** {row['brand']}")
+                        st.markdown(f"**Color:** {row['colour']}")
+                        
+                        # Add to cart/wishlist buttons
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("🛒 Add to Cart", key=f"cart_{row['p_id']}"):
+                                st.success("Added to cart!")
+                        with col2:
+                            if st.button("❤️ Wishlist", key=f"wish_{row['p_id']}"):
+                                st.success("Added to wishlist!")
+                        
+                        st.markdown("---")  # Separator between items
+                        
                 except Exception as e:
-                    st.error(f"Error displaying item {idx}: {str(e)}")
+                    st.error(f"Error displaying item {row['name']}: {str(e)}")
         
+        if filtered_df.empty:
+            st.info("No items found matching your filters.")
+            
     except Exception as e:
         st.error(f"Error loading Fashion Dataset: {str(e)}")
         st.write("Full error details:", e)
