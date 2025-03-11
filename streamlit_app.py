@@ -182,96 +182,57 @@ def show_wardrobe():
         # Load Fashion Dataset
         wardrobe_df = pd.read_csv('Fashion Dataset.csv')
         
-        # Add filter options
-        st.sidebar.header("Filters")
+        # Add search functionality
+        search_query = st.text_input("🔍 Search items (by name, category, etc.)")
         
-        # Price filter
-        price_range = st.sidebar.slider(
-            "Price Range (₹)", 
-            min_value=int(wardrobe_df['price'].min()),
-            max_value=int(wardrobe_df['price'].max()),
-            value=(int(wardrobe_df['price'].min()), int(wardrobe_df['price'].max()))
-        )
-        
-        # Brand filter
-        brands = sorted(wardrobe_df['brand'].unique())
-        selected_brands = st.sidebar.multiselect("Select Brands", brands)
-        
-        # Color filter
-        colors = sorted(wardrobe_df['colour'].unique())
-        selected_colors = st.sidebar.multiselect("Select Colors", colors)
-        
-        # Search by name
-        search_term = st.sidebar.text_input("Search by name")
-        
-        # Apply filters
-        filtered_df = wardrobe_df.copy()
-        
-        # Price filter
-        filtered_df = filtered_df[
-            (filtered_df['price'] >= price_range[0]) & 
-            (filtered_df['price'] <= price_range[1])
-        ]
-        
-        # Brand filter
-        if selected_brands:
-            filtered_df = filtered_df[filtered_df['brand'].isin(selected_brands)]
-        
-        # Color filter
-        if selected_colors:
-            filtered_df = filtered_df[filtered_df['colour'].isin(selected_colors)]
-        
-        # Name search
-        if search_term:
-            filtered_df = filtered_df[filtered_df['name'].str.contains(search_term, case=False, na=False)]
+        # Filter based on search
+        if search_query:
+            filtered_df = wardrobe_df[
+                wardrobe_df['name'].str.contains(search_query, case=False, na=False) |
+                wardrobe_df['brand'].str.contains(search_query, case=False, na=False) |
+                wardrobe_df['colour'].str.contains(search_query, case=False, na=False)
+            ]
+        else:
+            filtered_df = wardrobe_df
 
-        # Display items in a grid
-        num_cols = 3
-        cols = st.columns(num_cols)
+        # Create a grid layout
+        col1, col2, col3 = st.columns(3)
+        cols = [col1, col2, col3]
         
-        for index, row in filtered_df.iterrows():
-            col_idx = index % num_cols
-            with cols[col_idx]:
-                with st.container():
-                    # Product card with shadow and border
-                    st.markdown(
-                        f"""
-                        <div style='
-                            border: 1px solid #ddd;
-                            border-radius: 10px;
-                            padding: 10px;
-                            margin: 10px 0;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        '>
-                            <img src="{row['img']}" 
-                                style='width: 100%; 
-                                border-radius: 5px; 
-                                margin-bottom: 10px;'
-                            />
-                            <h4 style='margin: 5px 0; color: #333;'>{row['name']}</h4>
-                            <p style='color: #2E7D32; font-size: 18px; font-weight: bold;'>₹{row['price']}</p>
-                            <p><strong>Brand:</strong> {row['brand']}</p>
-                            <p><strong>Color:</strong> {row['colour']}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Buttons
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("🛒 Add to Cart", key=f"cart_{row['p_id']}"):
-                            st.success("Added to cart!")
-                    with col2:
-                        if st.button("❤️ Wishlist", key=f"wish_{row['p_id']}"):
-                            st.success("Added to wishlist!")
-
+        # Display items in grid
+        for idx, row in filtered_df.iterrows():
+            with cols[idx % 3]:
+                # Create a card for each item
+                st.write("---")
+                try:
+                    st.image(row['img'], use_column_width=True)
+                except:
+                    st.warning("Image not available")
+                
+                st.markdown(f"""
+                    <div style='background-color: white; padding: 10px; border-radius: 5px;'>
+                        <h3 style='color: #1f1f1f;'>{row['name']}</h3>
+                        <p style='color: #2E7D32; font-size: 24px;'>₹{row['price']}</p>
+                        <p><b>Brand:</b> {row['brand']}</p>
+                        <p><b>Color:</b> {row['colour']}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Add to cart and wishlist buttons
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("🛒 Add to Cart", key=f"cart_{row['p_id']}"):
+                        st.success("Added to cart!")
+                with c2:
+                    if st.button("❤️ Wishlist", key=f"wish_{row['p_id']}"):
+                        st.success("Added to wishlist!")
+        
         if filtered_df.empty:
-            st.info("No items found matching your filters.")
+            st.info("No items found matching your search.")
             
     except Exception as e:
-        st.error(f"Error loading Fashion Dataset: {str(e)}")
-        st.write("Full error details:", e)
+        st.error(f"Error: {str(e)}")
+        st.write("Please check if the image URLs are accessible.")
 
 def show_rent_items():
     st.header("Available Items for Rent")
